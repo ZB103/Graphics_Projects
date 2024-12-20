@@ -1,0 +1,1 @@
+This repository contains a collection of graphics programs created for my graphics and game design class CSC 470. All files are independent unless they are in a subfolder together.
