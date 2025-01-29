@@ -12,6 +12,130 @@ CanvasWidth = 600
 CanvasHeight = 600
 d = 500
 
+#Class that holds each of the objects in a more object-oriented approach
+class Shape:
+    # Object's polygons
+    polys = {}
+    # Object's underlying points, no structure
+    pointCloud = {}
+    # Point cloud to reset object to
+    defaultPointCloud = {}
+    
+    #constructor
+    def __init__(self, pol, pc):
+        self.polys = pol
+        self.pointCloud = pc
+        self.defaultPointCloud = copy.deepcopy(self.pointCloud)
+    
+    # This function resets the pyramid to its original size and location in 3D space
+    def resetObject(self):
+        for i in range(len(self.pointCloud)):
+            for j in range(3):
+                self.pointCloud[i][j] = self.defaultPointCloud[i][j]
+    
+    #centering the object at the origin
+    def centerObj(self):
+        #get center point
+        p2 = len(self.pointCloud) - 1  #last point in list
+        centerX = (self.pointCloud[0][0] + self.pointCloud[p2][0]) / 2
+        centerY = (self.pointCloud[0][1] + self.pointCloud[p2][1]) / 2
+        centerZ = (self.pointCloud[0][2] + self.pointCloud[p2][2]) / 2
+        center = [centerX, centerY, centerZ]
+        centeredObj = []
+        #move object to origin based on center point
+        for i in range(0, len(self.pointCloud)):
+            centeredObj.append([])
+            for j in range(0, len(self.pointCloud[0])):
+                centeredObj[i].append(self.pointCloud[i][j] - center[j])
+        return centeredObj, center
+
+    # This function translates an object by some displacement.  The displacement is a 3D
+    # vector so the amount of displacement in each dimension can vary.
+    def translate(self, displacement):
+        #parsing the object at each polygon
+        for polygon in range(len(self.pointCloud)):
+            #parsing the polygon at each point
+            for point in range(len(self.pointCloud[0])):
+                #editing each point by amount specified
+                self.pointCloud[polygon][point] += displacement[point]
+        
+    # This function performs a simple uniform scale of an object assuming the object is
+    # centered at the origin.  The scalefactor is a scalar.
+    def scale(self, scalefactor):
+        #center obj at origin
+        centeredObj, center = self.centerObj()
+        
+        #parsing the object at each polygon
+        for i in range(0,len(self.pointCloud)):
+            #parsing the polygon at each point
+            for j in range(0,len(self.pointCloud[0])):
+                #editing each point by amount specified and putting back
+                centeredObj[i][j] *= scalefactor
+                self.pointCloud[i][j] = centeredObj[i][j] + center[j]
+    
+    # This function performs a rotation of an object about the Z axis (from +X to +Y)
+    # by 'degrees', assuming the object is centered at the origin.  The rotation is CCW
+    # in a LHS when viewed from -Z [the location of the viewer in the standard postion]
+    def rotateZ(self, degrees):
+        radians = math.radians(degrees)
+        #center obj at origin
+        centeredObj, center = self.centerObj()
+        
+        rotObj = []
+        #parsing the object at each polygon
+        for i in range(0,len(self.pointCloud)):
+            #rotating object
+            rotObj.append([])
+            rotObj[i].append(centeredObj[i][0] * math.cos(radians) - centeredObj[i][1] * math.sin(radians))
+            rotObj[i].append(centeredObj[i][0] * math.sin(radians) + centeredObj[i][1] * math.cos(radians))
+            rotObj[i].append(centeredObj[i][2])
+            #parsing the polygon at each point
+            for j in range(0,len(self.pointCloud[0])):
+                #putting object back
+                self.pointCloud[i][j] = rotObj[i][j] + center[j]
+    
+    # This function performs a rotation of an object about the Y axis (from +Z to +X)
+    # by 'degrees', assuming the object is centered at the origin.  The rotation is CW
+    # in a LHS when viewed from +Y looking toward the origin.
+    def rotateY(self, degrees):
+        radians = math.radians(degrees)
+        #center obj at origin
+        centeredObj, center = self.centerObj()
+        
+        rotObj = []
+        #parsing the object at each polygon
+        for i in range(0,len(self.pointCloud)):
+            #rotating object
+            rotObj.append([])
+            rotObj[i].append(centeredObj[i][0] * math.cos(radians) + centeredObj[i][2] * math.sin(radians))
+            rotObj[i].append(centeredObj[i][1])
+            rotObj[i].append((-1)*centeredObj[i][0] * math.sin(radians) + centeredObj[i][2] * math.cos(radians))
+            #parsing the polygon at each point
+            for j in range(0,len(self.pointCloud[0])):
+                #putting object back
+                self.pointCloud[i][j] = rotObj[i][j] + center[j]
+
+    # This function performs a rotation of an object about the X axis (from +Y to +Z)
+    # by 'degrees', assuming the object is centered at the origin.  The rotation is CW
+    # in a LHS when viewed from +X looking toward the origin.
+    def rotateX(self, degrees):
+        radians = math.radians(degrees)
+        #center obj at origin
+        centeredObj, center = self.centerObj()
+        
+        rotObj = []
+        #parsing the object at each polygon
+        for i in range(0,len(self.pointCloud)):
+            #rotating object
+            rotObj.append([])
+            rotObj[i].append(centeredObj[i][0])
+            rotObj[i].append(centeredObj[i][1] * math.cos(radians) - centeredObj[i][2] * math.sin(radians))
+            rotObj[i].append(centeredObj[i][1] * math.sin(radians) + centeredObj[i][2] * math.cos(radians))
+            #parsing the polygon at each point
+            for j in range(0,len(self.pointCloud[0])):
+                #putting object back
+                self.pointCloud[i][j] = rotObj[i][j] + center[j]
+
 # ***************************** Initialize Pyramid Object ***************************
 # Definition  of the five underlying points
 apex = [0,50,100]
@@ -29,11 +153,7 @@ leftpoly = [apex,base4,base3]
 bottompoly = [base1,base2,base3,base4]
 
 # Definition of the object
-Pyramid = [bottompoly, frontpoly, rightpoly, backpoly, leftpoly]
-
-# Definition of the Pyramid's underlying point cloud.  No structure, just the points.
-PyramidPointCloud = [apex, base1, base2, base3, base4]
-DefaultPyramidPointCloud = copy.deepcopy(PyramidPointCloud)
+Pyramid = Shape([bottompoly, frontpoly, rightpoly, backpoly, leftpoly], [apex, base1, base2, base3, base4])
 
 # ***************************** Initialize Cube 1 Object ***************************
 # Definition  of the eight underlying points
@@ -56,11 +176,7 @@ ltoppoly = [lcube5,lcube7,lcube3,lcube1]
 lbottompoly = [lcube2,lcube4,lcube8,lcube6]
 
 # Definition of the object
-LCube = [ltoppoly, lbottompoly, lfrontpoly, lrightpoly, lbackpoly, lleftpoly]
-
-# Definition of the Pyramid's underlying point cloud.  No structure, just the points.
-LCubePointCloud = [lcube1,lcube2,lcube3,lcube4,lcube5,lcube6,lcube7,lcube8]
-DefaultLCubePointCloud = copy.deepcopy(LCubePointCloud)
+LCube = Shape([ltoppoly, lbottompoly, lfrontpoly, lrightpoly, lbackpoly, lleftpoly], [lcube1,lcube2,lcube3,lcube4,lcube5,lcube6,lcube7,lcube8])
 
 # ***************************** Initialize Cube 2 Object ***************************
 # Definition  of the eight underlying points
@@ -83,186 +199,45 @@ rtoppoly = [rcube5,rcube7,rcube3,rcube1]
 rbottompoly = [rcube2,rcube4,rcube8,rcube6]
 
 # Definition of the object
-RCube = [rtoppoly, rbottompoly, rfrontpoly, rrightpoly, rbackpoly, rleftpoly]
-
-# Definition of the Pyramid's underlying point cloud.  No structure, just the points.
-RCubePointCloud = [rcube1,rcube2,rcube3,rcube4,rcube5,rcube6,rcube7,rcube8]
-DefaultRCubePointCloud = copy.deepcopy(RCubePointCloud)
+RCube = Shape([rtoppoly, rbottompoly, rfrontpoly, rrightpoly, rbackpoly, rleftpoly], [rcube1,rcube2,rcube3,rcube4,rcube5,rcube6,rcube7,rcube8])
 
 
 
-#************************************************************************************
+#**************************************drawing functions**********************************************
 
-# This function resets the pyramid to its original size and location in 3D space
-def resetPyramid():
-    for i in range(len(PyramidPointCloud)):
-        for j in range(3):
-            PyramidPointCloud[i][j] = DefaultPyramidPointCloud[i][j]
-
-# This function resets the left cube to its original size and location in 3D space
-def resetLCube():
-    for i in range(len(LCubePointCloud)):
-        for j in range(3):
-            LCubePointCloud[i][j] = DefaultLCubePointCloud[i][j]
-            
-# This function resets the right cube to its original size and location in 3D space
-def resetRCube():
-    for i in range(len(RCubePointCloud)):
-        for j in range(3):
-            RCubePointCloud[i][j] = DefaultRCubePointCloud[i][j]
-
-
-# This function translates an object by some displacement.  The displacement is a 3D
-# vector so the amount of displacement in each dimension can vary.
-def translate(object, displacement):
-    #parsing the object at each polygon
-    for polygon in range(len(object)):
-        #parsing the polygon at each point
-        for point in range(len(object[0])):
-            #editing each point by amount specified
-            object[polygon][point] += displacement[point]
-    
-# This function performs a simple uniform scale of an object assuming the object is
-# centered at the origin.  The scalefactor is a scalar.
-def scale(object,scalefactor):
-    #centering the object at the origin
-    #get center point
-    p2 = len(object) - 1  #last point in list
-    centerX = (object[0][0] + object[p2][0]) / 2
-    centerY = (object[0][1] + object[p2][1]) / 2
-    centerZ = (object[0][2] + object[p2][2]) / 2
-    center = [centerX, centerY, centerZ]
-    centeredObj = []
-    #move object to origin based on center point
-    for i in range(0, len(object)):
-        centeredObj.append([])
-        for j in range(0, len(object[0])):
-            centeredObj[i].append(object[i][j] - center[j])
-    
-    #parsing the object at each polygon
-    for i in range(0,len(object)):
-        #parsing the polygon at each point
-        for j in range(0,len(object[0])):
-            #editing each point by amount specified and putting back
-            centeredObj[i][j] *= scalefactor
-            object[i][j] = centeredObj[i][j] + center[j]
-
-# This function performs a rotation of an object about the Z axis (from +X to +Y)
-# by 'degrees', assuming the object is centered at the origin.  The rotation is CCW
-# in a LHS when viewed from -Z [the location of the viewer in the standard postion]
-def rotateZ(object,degrees):
-    degrees = math.radians(degrees)
-    #centering the object at the origin
-    #get center point
-    p2 = len(object) - 1  #last point in list
-    centerX = (object[0][0] + object[p2][0]) / 2
-    centerY = (object[0][1] + object[p2][1]) / 2
-    centerZ = (object[0][2] + object[p2][2]) / 2
-    center = [centerX, centerY, centerZ]
-    centeredObj = []
-    #move object to origin based on center point
-    for i in range(0, len(object)):
-        centeredObj.append([])
-        for j in range(0, len(object[0])):
-            centeredObj[i].append(object[i][j] - center[j])
-    
-    rotObj = []
-    #parsing the object at each polygon
-    for i in range(0,len(object)):
-        #rotating object
-        rotObj.append([])
-        rotObj[i].append(centeredObj[i][0] * math.cos(degrees) - centeredObj[i][1] * math.sin(degrees))
-        rotObj[i].append(centeredObj[i][0] * math.sin(degrees) + centeredObj[i][1] * math.cos(degrees))
-        rotObj[i].append(centeredObj[i][2])
-        #parsing the polygon at each point
-        for j in range(0,len(object[0])):
-            #putting object back
-            object[i][j] = rotObj[i][j] + center[j]
-    
-# This function performs a rotation of an object about the Y axis (from +Z to +X)
-# by 'degrees', assuming the object is centered at the origin.  The rotation is CW
-# in a LHS when viewed from +Y looking toward the origin.
-def rotateY(object,degrees):
-    degrees = math.radians(degrees)
-    #centering the object at the origin
-    #get center point
-    p2 = len(object) - 1  #last point in list
-    centerX = (object[0][0] + object[p2][0]) / 2
-    centerY = (object[0][1] + object[p2][1]) / 2
-    centerZ = (object[0][2] + object[p2][2]) / 2
-    center = [centerX, centerY, centerZ]
-    centeredObj = []
-    #move object to origin based on center point
-    for i in range(0, len(object)):
-        centeredObj.append([])
-        for j in range(0, len(object[0])):
-            centeredObj[i].append(object[i][j] - center[j])
-    
-    rotObj = []
-    #parsing the object at each polygon
-    for i in range(0,len(object)):
-        #rotating object
-        rotObj.append([])
-        rotObj[i].append(centeredObj[i][0] * math.cos(degrees) + centeredObj[i][2] * math.sin(degrees))
-        rotObj[i].append(centeredObj[i][1])
-        rotObj[i].append((-1)*centeredObj[i][0] * math.sin(degrees) + centeredObj[i][2] * math.cos(degrees))
-        #parsing the polygon at each point
-        for j in range(0,len(object[0])):
-            #putting object back
-            object[i][j] = rotObj[i][j] + center[j]
-
-# This function performs a rotation of an object about the X axis (from +Y to +Z)
-# by 'degrees', assuming the object is centered at the origin.  The rotation is CW
-# in a LHS when viewed from +X looking toward the origin.
-def rotateX(object,degrees):
-    degrees = math.radians(degrees)
-    #centering the object at the origin
-    #get center point
-    p2 = len(object) - 1  #last point in list
-    centerX = (object[0][0] + object[p2][0]) / 2
-    centerY = (object[0][1] + object[p2][1]) / 2
-    centerZ = (object[0][2] + object[p2][2]) / 2
-    center = [centerX, centerY, centerZ]
-    centeredObj = []
-    #move object to origin based on center point
-    for i in range(0, len(object)):
-        centeredObj.append([])
-        for j in range(0, len(object[0])):
-            centeredObj[i].append(object[i][j] - center[j])
-    
-    rotObj = []
-    #parsing the object at each polygon
-    for i in range(0,len(object)):
-        #rotating object
-        rotObj.append([])
-        rotObj[i].append(centeredObj[i][0])
-        rotObj[i].append(centeredObj[i][1] * math.cos(degrees) - centeredObj[i][2] * math.sin(degrees))
-        rotObj[i].append(centeredObj[i][1] * math.sin(degrees) + centeredObj[i][2] * math.cos(degrees))
-        #parsing the polygon at each point
-        for j in range(0,len(object[0])):
-            #putting object back
-            object[i][j] = rotObj[i][j] + center[j]
+#redraws all shapes
+def drawAll():
+    drawObject(0)
+    drawObject(1)
+    drawObject(2)
 
 # The function will draw an object by repeatedly callying drawPoly on each polygon in the object
-def drawObject(object,lineColor):
+def drawObject(objectNum):
     #object: list of polygons
-    for polygon in object:
-        drawPoly(polygon,lineColor)
+    #deciding line color, red for selected shape
+    lineColor = ""
+    if(objectNum == currObj):
+        lineColor = "red"
+    else:
+        lineColor = "black"
+    #draw polygons
+    for polygon in objList[objectNum].polys:
+        drawPoly(polygon, lineColor)
 
 # This function will draw a polygon by repeatedly callying drawLine on each pair of points
 # making up the object.  Remember to draw a line between the last point and the first.
-def drawPoly(poly,lineColor):
+def drawPoly(poly, lineColor):
     #poly: list of points
     #parse list of points to draw line
     for i in range(0, len(poly) - 1):
-        drawLine(poly[i], poly[i+1],lineColor)
+        drawLine(poly[i], poly[i+1], lineColor)
     #draw line from last point to first point
     drawLine(poly[len(poly)-1], poly[0],lineColor)
 
 # Project the 3D endpoints to 2D point using a perspective projection implemented in 'project'
 # Convert the projected endpoints to display coordinates via a call to 'convertToDisplayCoordinates'
 # draw the actual line using the built-in create_line method
-def drawLine(point1, point2,lineColor):
+def drawLine(point1, point2, lineColor):
     #point: list of coordinates
     #converting points and drawing line between them
     projectedStart = project(point1)
@@ -304,17 +279,14 @@ def convertToDisplayCoordinates(point):
     
     #x does not change
     newX = float(point[0])
-    
     #y becomes inverted sign
     newY = point[1] * -1
-    
     #z becomes inverted sign
     newZ = point[2] * -1
-    
     #move x and y to origin
     newX = newX + CanvasWidth / 2
     newY = newY + CanvasHeight / 2
-
+    
     #turn point into array and return
     displayXY = [newX, newY, newZ]
     return displayXY
@@ -324,131 +296,97 @@ def convertToDisplayCoordinates(point):
 # Everything below this point implements the interface
 def reset():
     w.delete(ALL)
-    if selectedObj == Pyramid:
-        resetPyramid()
-    elif selectedObj == LCube:
-        resetLCube()
-    elif selectedObj == RCube:
-        resetRCube()
+    objList[currObj].resetObject()
     drawAll()
 
 def larger():
     w.delete(ALL)
-    scale(selectedObjCloud,1.1)
+    objList[currObj].scale(1.1)
     drawAll()
 
 def smaller():
     w.delete(ALL)
-    scale(selectedObjCloud,.9)
+    objList[currObj].scale(.9)
     drawAll()
 
 def forward():
     w.delete(ALL)
-    translate(selectedObjCloud,[0,0,5])
+    objList[currObj].translate([0,0,5])
     drawAll()
 
 def backward():
     w.delete(ALL)
-    translate(selectedObjCloud,[0,0,-5])
+    objList[currObj].translate([0,0,-5])
     drawAll()
 
 def left():
     w.delete(ALL)
-    translate(selectedObjCloud,[-5,0,0])
+    objList[currObj].translate([-5,0,0])
     drawAll()
 
 def right():
     w.delete(ALL)
-    translate(selectedObjCloud,[5,0,0])
+    objList[currObj].translate([5,0,0])
     drawAll()
 
 def up():
     w.delete(ALL)
-    translate(selectedObjCloud,[0,5,0])
+    objList[currObj].translate([0,5,0])
     drawAll()
 
 def down():
     w.delete(ALL)
-    translate(selectedObjCloud,[0,-5,0])
+    objList[currObj].translate([0,-5,0])
     drawAll()
 
 def xPlus():
     w.delete(ALL)
-    rotateX(selectedObjCloud,5)
+    objList[currObj].rotateX(5)
     drawAll()
 
 def xMinus():
     w.delete(ALL)
-    rotateX(selectedObjCloud,-5)
+    objList[currObj].rotateX(-5)
     drawAll()
 
 def yPlus():
     w.delete(ALL)
-    rotateY(selectedObjCloud,5)
+    objList[currObj].rotateY(5)
     drawAll()
 
 def yMinus():
     w.delete(ALL)
-    rotateY(selectedObjCloud,-5)
+    objList[currObj].rotateY(-5)
     drawAll()
 
 def zPlus():
     w.delete(ALL)
-    rotateZ(selectedObjCloud,5)
+    objList[currObj].rotateZ(5)
     drawAll()
 
 def zMinus():
     w.delete(ALL)
-    rotateZ(selectedObjCloud,-5)
+    objList[currObj].rotateZ(-5)
     drawAll()
-
-#redraws all shapes
-def drawAll():
-    if selectedObj == Pyramid:
-        drawObject(Pyramid,"red")
-        drawObject(LCube,"black")
-        drawObject(RCube,"black")
-    elif selectedObj == LCube:
-        drawObject(Pyramid,"black")
-        drawObject(LCube,"red")
-        drawObject(RCube,"black")
-    elif selectedObj == RCube:
-        drawObject(Pyramid,"black")
-        drawObject(LCube,"black")
-        drawObject(RCube,"red")
-
-
 
 #switches the object highlighted to the one to its right
 def switchTargetRight(event):
-    global selectedObj
-    global selectedObjCloud
-    if selectedObj == LCube:
-        selectedObj = Pyramid
-        selectedObjCloud = PyramidPointCloud
-    elif selectedObj == Pyramid:
-        selectedObj = RCube
-        selectedObjCloud = RCubePointCloud
-    elif selectedObj == RCube:
-        selectedObj = LCube
-        selectedObjCloud = LCubePointCloud
+    global currObj
+    currObj += 1
+    #loop to top of list
+    if currObj == 3:
+        currObj = 0
     #redraw with new selection colored red
     w.delete(ALL)
     drawAll()
     
 #switches the object highlighted to the one to its left
 def switchTargetLeft(event):
-    global selectedObj
-    global selectedObjCloud
-    if selectedObj == RCube:
-        selectedObj = Pyramid
-        selectedObjCloud = PyramidPointCloud
-    elif selectedObj == LCube:
-        selectedObj = RCube
-        selectedObjCloud = RCubePointCloud
-    elif selectedObj == Pyramid:
-        selectedObj = LCube
-        selectedObjCloud = LCubePointCloud
+    global currObj
+    currObj -= 1
+    #loop to top of list
+    if currObj == -1:
+        currObj = 2
     #redraw with new selection colored red
     w.delete(ALL)
     drawAll()
@@ -460,9 +398,11 @@ outerframe.pack()
 
 #creating default workspace
 w = Canvas(outerframe, width=CanvasWidth, height=CanvasHeight)
+#creating list of objects
+            #0      1       2
+objList = [LCube, Pyramid, RCube]
 #begins as selection
-selectedObj = Pyramid
-selectedObjCloud = PyramidPointCloud
+currObj = 1 #Pyramid
 drawAll()
 w.pack()
 
